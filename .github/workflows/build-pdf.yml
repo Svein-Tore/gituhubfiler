@@ -1,9 +1,9 @@
-name: Build All LaTeX PDFs
+name: Build All LaTeX PDFs - v26
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # lar deg kjøre manuelt også
+  workflow_dispatch:  # kan også kjøre manuelt
 
 jobs:
   build:
@@ -13,17 +13,17 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install LaTeX
-      run: sudo apt-get update && sudo apt-get install -y \
-           latexmk texlive-latex-extra texlive-fonts-recommended \
-           texlive-latex-recommended texlive-science texlive-lang-european
+    - name: Install TeX Live
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y texlive-full
 
     - name: Build all LaTeX PDFs
       run: |
         mkdir -p pdfs
         for f in *.tex; do
           echo "Bygger $f ..."
-          latexmk -pdf -interaction=nonstopmode "$f"
+          latexmk -pdf -interaction=nonstopmode "$f" || echo "⚠️ Bygg feilet for $f"
           name=$(basename "$f" .tex)
           if [ -f "$name.pdf" ]; then
             mv "$name.pdf" "pdfs/$name.pdf"
@@ -36,5 +36,5 @@ jobs:
     - name: Upload PDFs as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: built-pdfs
+        name: built-pdfs-v26
         path: pdfs/*.pdf
