@@ -1,0 +1,35 @@
+name: Build LaTeX PDF
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup TeX Live
+      uses: xu-cheng/latex-action@v2
+      with:
+        latexmk: true
+        root_file: main.tex
+
+    - name: Create pdfs folder
+      run: mkdir -p pdfs
+
+    - name: Move generated PDF
+      run: mv main.pdf pdfs/main.pdf
+
+    - name: Commit PDF to repo
+      run: |
+        git config --local user.name "github-actions"
+        git config --local user.email "github-actions@github.com"
+        git add pdfs/main.pdf
+        git commit -m "Update PDF" || echo "No changes to commit"
+        git push
