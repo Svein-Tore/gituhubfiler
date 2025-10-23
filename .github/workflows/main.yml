@@ -1,0 +1,40 @@
+name: Bygg LaTeX PDF
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Sjekk ut repoet
+      uses: actions/checkout@v3
+
+    - name: Installer TeX Live
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra
+
+    - name: Bygg PDF fra main.tex
+      run: |
+        pdflatex main.tex
+
+    - name: Opprett pdfs-mappe
+      run: mkdir -p pdfs
+
+    - name: Flytt PDF til pdfs-mappen
+      run: mv main.pdf pdfs/main.pdf
+
+    - name: Commit og push PDF til repoet
+      run: |
+        git config --local user.name "github-actions"
+        git config --local user.email "github-actions@github.com"
+        git add pdfs/main.pdf
+        git commit -m "Oppdater PDF"
+        git push
