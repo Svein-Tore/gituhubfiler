@@ -4,15 +4,18 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write  # 👈 Gir workflowen lov til å pushe til repoet
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
-        persist-credentials: false
+        token: ${{ secrets.GITHUB_TOKEN }}  # 👈 Gir checkout skrive-tilgang
 
     - name: Build LaTeX PDF
       uses: xu-cheng/latex-action@v2
@@ -26,12 +29,10 @@ jobs:
     - name: Move PDF to pdfs folder
       run: mv main.pdf pdfs/main.pdf
 
-    - name: Commit and push PDF to repo
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Commit and push PDF
       run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@github.com"
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
         git add pdfs/main.pdf
         git commit -m "Update PDF" || echo "No changes to commit"
-        git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:main
+        git push
