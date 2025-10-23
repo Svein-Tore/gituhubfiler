@@ -13,6 +13,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        persist-credentials: true  # Viktig: gjør at workflowen kan pushe tilbake
 
     - name: Setup TeX Live
       uses: xu-cheng/latex-action@v2
@@ -20,13 +22,13 @@ jobs:
         latexmk: true
         root_file: main.tex
 
-    - name: Create pdfs folder
+    - name: Ensure pdfs folder exists
       run: mkdir -p pdfs
 
-    - name: Move generated PDF
+    - name: Move PDF to pdfs folder
       run: mv main.pdf pdfs/main.pdf
 
-    - name: Commit PDF to repo
+    - name: Commit and push PDF
       run: |
         git config --local user.name "github-actions"
         git config --local user.email "github-actions@github.com"
