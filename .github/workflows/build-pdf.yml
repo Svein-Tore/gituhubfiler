@@ -1,4 +1,4 @@
-name: Build and Push PDFs
+name: Build and Push PDFs to pdfs-branch
 
 on:
   push:
