@@ -1,14 +1,28 @@
 \documentclass{article}
-\usepackage{graphicx} % Required for inserting images
 
-\title{gituhubfiler}
-\author{Svein-Tore Narvestad}
-\date{October 2025}
+% ----------------------------
+% Automatisk kopiering av PDF til pdfs/
+% ----------------------------
+% Merk: Shell escape må være aktivert i Overleaf
+% Menu → Settings → Compiler → Enable shell escape
+
+\immediate\write18{mkdir -p pdfs} % opprett mappen hvis den ikke finnes
+\AtEndDocument{
+    \immediate\write18{cp "\jobname.pdf" "pdfs/\jobname.pdf"}
+    % DEBUG-melding i loggen
+    \typeout{PDF kopiert til pdfs/\jobname.pdf}
+}
+
+% ----------------------------
+% Eksempelinnhold
+% ----------------------------
+\usepackage{lipsum} % bare for eksempeltekst
 
 \begin{document}
 
-\maketitle
+\section{Test}
+Dette er et testdokument.
 
-\section{Introduction}
+\lipsum[1-2]
 
 \end{document}
