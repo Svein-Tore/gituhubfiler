@@ -1,4 +1,108 @@
-\documentclass{article}
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\title{Oppsummering: Sett opp GitHub workflow for PDF-er fra Overleaf}
+\author{}
+\date{}
+
 \begin{document}
-Dette er en test-PDF.
+\maketitle
+
+\section*{1. Opprett GitHub-repo}
+\begin{enumerate}[label=\arabic*.]
+    \item Lag et nytt repository på GitHub, f.eks. \texttt{klassefiler}.
+    \item Koble Overleaf-prosjektet til dette repoet:
+    \begin{itemize}
+        \item Overleaf $\to$ Menu $\to$ GitHub $\to$ Link to GitHub
+        \item Velg repo og branch (\texttt{main})
+    \end{itemize}
+\end{enumerate}
+
+\section*{2. Lag workflow-fil}
+\begin{enumerate}[label=\arabic*.]
+    \item Opprett mappe og fil i repoet:
+    \begin{verbatim}
+.github/workflows/build-pdf.yml
+    \end{verbatim}
+    \item Lim inn workflow-koden (bygger alle \texttt{.tex}-filer og pusher PDF-er til \texttt{pdfs-branch}):
+    \begin{verbatim}
+name: Build and Push PDFs to pdfs-branch
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install TeX Live
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y texlive-full
+
+    - name: Build all LaTeX PDFs
+      run: |
+        mkdir -p pdfs
+        for f in *.tex; do
+          latexmk -pdf -interaction=nonstopmode "$f"
+          name=$(basename "$f" .tex)
+          if [ -f "$name.pdf" ]; then
+            mv "$name.pdf" "pdfs/$name.pdf"
+          fi
+        done
+
+    - name: Push PDFs to pdfs-branch
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git checkout -B pdfs-branch
+        git add pdfs/*.pdf
+        git commit -m "Oppdater PDF-er automatisk fra main" || echo "Ingen endringer å committe"
+        git push -u origin pdfs-branch --force
+    \end{verbatim}
+\end{enumerate}
+
+\section*{3. Bruk workflowen}
+\begin{enumerate}[label=\arabic*.]
+    \item Jobb i Overleaf som vanlig under undervisningen.
+    \item Etter timen: trykk \texttt{Menu $\to$ GitHub $\to$ Push}.
+    \item Workflowen trigges automatisk på GitHub.
+    \item Når workflowen er ferdig:
+    \begin{itemize}
+        \item Gå til \texttt{Branches $\to$ pdfs-branch $\to$ pdfs/}.
+        \item PDF-ene ligger klare til nedlasting.
+    \end{itemize}
+\end{enumerate}
+
+\section*{4. Tips for elever}
+\begin{itemize}
+    \item Elevene kan gå til:
+    \begin{verbatim}
+https://github.com/<brukernavn>/<repo>/tree/pdfs-branch/pdfs
+    \end{verbatim}
+    \item Klikk på PDF $\to$ \texttt{Download}.
+    \item Alle PDF-er har samme navn som de tilsvarende \texttt{.tex}-filene.
+\end{itemize}
+
+\section*{Merk}
+\begin{itemize}
+    \item Du trenger ikke endre \texttt{main.tex} for nye filer i undermapper – workflowen bygger alle \texttt{.tex}-filer.
+    \item PDF-ene genereres etter push – du kan bruke 10--15 minutter på bygging uten at det påvirker undervisningen.
+\end{itemize}
+
 \end{document}
