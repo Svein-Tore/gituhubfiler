@@ -1,9 +1,7 @@
-name: Build LaTeX PDF
+name: Build and Commit LaTeX PDF
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 jobs:
@@ -13,6 +11,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        persist-credentials: false
 
     - name: Build LaTeX PDF
       uses: xu-cheng/latex-action@v2
@@ -20,13 +20,18 @@ jobs:
         root_file: main.tex
         compiler: latexmk
 
-    - name: Move PDF to pdfs folder
-      run: |
-        mkdir -p pdfs
-        mv main.pdf pdfs/main.pdf
+    - name: Ensure pdfs folder exists
+      run: mkdir -p pdfs
 
-    - name: Upload PDF as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: built-pdf
-        path: pdfs/main.pdf
+    - name: Move PDF to pdfs folder
+      run: mv main.pdf pdfs/main.pdf
+
+    - name: Commit and push PDF to repo
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@github.com"
+        git add pdfs/main.pdf
+        git commit -m "Update PDF" || echo "No changes to commit"
+        git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:main
