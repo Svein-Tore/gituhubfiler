@@ -11,28 +11,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Sjekk ut repoet med write-tilgang
     - name: Checkout repository
       uses: actions/checkout@v3
-      with:
-        persist-credentials: true   # Viktig for push
 
-    # 2. Bygg PDF med LaTeX
     - name: Build LaTeX PDF
       uses: xu-cheng/latex-action@v2
       with:
         root_file: main.tex
         compiler: latexmk
 
-    # 3. Flytt PDF til pdfs-mappen
     - name: Move PDF to pdfs folder
-      run: mv main.pdf pdfs/main.pdf
-
-    # 4. Commit og push PDF
-    - name: Commit and push PDF
       run: |
-        git config --local user.name "github-actions"
-        git config --local user.email "github-actions@github.com"
-        git add pdfs/main.pdf
-        git commit -m "Update PDF" || echo "No changes to commit"
-        git push
+        mkdir -p pdfs
+        mv main.pdf pdfs/main.pdf
+
+    - name: Upload PDF as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: built-pdf
+        path: pdfs/main.pdf
