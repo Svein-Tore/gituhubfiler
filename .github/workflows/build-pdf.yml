@@ -1,11 +1,11 @@
-name: Build and Commit LaTeX PDF
+name: Build and Commit All PDFs
 
 on:
   push:
     branches: [ main ]
 
 permissions:
-  contents: write  # 👈 Gir workflowen lov til å pushe til repoet
+  contents: write  # lar workflowen pushe tilbake til repoet
 
 jobs:
   build:
@@ -15,24 +15,30 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}  # 👈 Gir checkout skrive-tilgang
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build LaTeX PDF
-      uses: xu-cheng/latex-action@v2
-      with:
-        root_file: main.tex
-        compiler: latexmk
+    - name: Install LaTeX
+      run: sudo apt-get update && sudo apt-get install -y latexmk texlive-latex-extra texlive-fonts-recommended texlive-latex-recommended texlive-science texlive-lang-european
 
-    - name: Ensure pdfs folder exists
-      run: mkdir -p pdfs
+    - name: Build all LaTeX PDFs
+      run: |
+        mkdir -p pdfs
+        for f in *.tex; do
+          echo "Bygger $f ..."
+          latexmk -pdf -interaction=nonstopmode "$f"
+          name=$(basename "$f" .tex)
+          if [ -f "$name.pdf" ]; then
+            mv "$name.pdf" "pdfs/$name.pdf"
+            echo "✅ Ferdig: $name.pdf"
+          else
+            echo "⚠️ Ingen PDF generert for $f"
+          fi
+        done
 
-    - name: Move PDF to pdfs folder
-      run: mv main.pdf pdfs/main.pdf
-
-    - name: Commit and push PDF
+    - name: Commit and push all PDFs
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
-        git add pdfs/main.pdf
-        git commit -m "Update PDF" || echo "No changes to commit"
+        git add pdfs/*.pdf || echo "Ingen PDF-er å legge til"
+        git commit -m "Oppdaterte PDF-er automatisk" || echo "Ingen endringer å committe"
         git push
