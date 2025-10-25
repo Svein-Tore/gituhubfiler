@@ -53,10 +53,10 @@ jobs:
           git reset --hard
           git rm -rf .
 
-          # Kopier PDF-er til rotnivå
-          cp -r pdfs/* .
+          # Kopier PDF-er og undermapper til rotnivå med rsync
+          rsync -a pdfs/ ./
 
-          # Legg til .gitkeep hvis katalogen er tom (unngå pathspec-feil)
+          # Legg til .gitkeep hvis katalogen fortsatt er tom
           if [ -z "$(ls -A .)" ]; then
             touch .gitkeep
           fi
