@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Installer LaTeX
+      # 2️⃣ Installer nødvendige LaTeX-pakker
       - name: Install LaTeX
         run: |
           sudo apt-get update
@@ -30,14 +30,16 @@ jobs:
             latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
           done
 
-      # 4️⃣ Flytt PDF-er til pdfs/
-      - name: Move all PDFs to pdfs folder
+      # 4️⃣ Kopier alle PDF-er til pdfs/
+      - name: Collect all PDFs
         run: |
-          find . -name "*.pdf" -not -path "./pdfs/*" -exec mv {} pdfs/ \;
-          echo "✅ PDFs generated:"
+          mkdir -p pdfs
+          # Kopier alle PDF-er uansett hvor de ligger
+          find . -name "*.pdf" -exec cp {} pdfs/ \;
+          echo "✅ PDFs collected:"
           ls -l pdfs
 
-      # 5️⃣ Last opp PDF-er som artifacts
+      # 5️⃣ Last opp PDF-er som artifact
       - name: Upload PDFs as artifact
         uses: actions/upload-artifact@v4
         with:
