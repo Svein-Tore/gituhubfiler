@@ -14,13 +14,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build LaTeX PDFs
-        uses: xu-cheng/latex-action@v2
-        with:
-          root_file: |
-            main.tex
-            **/*.tex
-          compiler: latexmk
+      - name: Find all .tex files
+        id: texfiles
+        run: |
+          echo "Found TeX files:"
+          find . -name "*.tex" -not -path "./pdfs/*" > texfiles.txt
+          cat texfiles.txt
+          echo "TEX_FILES<<EOF" >> $GITHUB_ENV
+          cat texfiles.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Build each LaTeX file
+        run: |
+          while read file; do
+            echo "🧩 Building $file ..."
+            latexmk -pdf -interaction=nonstopmode "$file"
+          done < texfiles.txt
 
       - name: Create pdfs directory
         run: mkdir -p pdfs
@@ -45,7 +54,6 @@ jobs:
             echo "<li><a href='$rel'>$rel</a></li>" >> pdfs/index.html
           done
           echo "</ul></body></html>" >> pdfs/index.html
-          cat pdfs/index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
