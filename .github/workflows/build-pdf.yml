@@ -15,18 +15,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          persist-credentials: true
 
-      # ⚡ Bruker ferdigbygget LaTeX-miljø (raskt!)
-      - name: Set up LaTeX environment
-        uses: xu-cheng/latex-action@v2
-        with:
-          root_file: dummy.tex # Vi overstyrer dette manuelt senere
-        env:
-          FORCE_RUN: true
+      # Installer nødvendige LaTeX-pakker
+      - name: Install LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk
 
-      # 🧱 Bygger alle .tex-filer (også i undermapper)
+      # Bygg alle .tex-filer
       - name: Build all .tex files
         run: |
           mkdir -p pdfs
@@ -35,14 +31,14 @@ jobs:
             latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
           done
 
-      # 📦 Samler alle PDF-er i pdfs/
+      # Flytt PDF-er til pdfs/
       - name: Move all PDFs to pdfs folder
         run: |
           find . -name "*.pdf" -not -path "./pdfs/*" -exec mv {} pdfs/ \;
-          echo "✅ Finished moving PDFs:"
+          echo "✅ PDFs generated:"
           ls -l pdfs
 
-      # 🔁 Commit og push PDF-ene tilbake til repoet
+      # Commit og push PDF-er
       - name: Commit and push PDFs
         run: |
           git config --local user.name "github-actions"
