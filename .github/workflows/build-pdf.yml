@@ -47,7 +47,7 @@ jobs:
           echo "📂 PDFs ready for deploy:"
           find pdfs -type f -name "*.pdf"
 
-      - name: Generate foldable index.html with colored folders
+      - name: Generate foldable index.html with colored folders and download links
         run: |
           INDEX="pdfs/index.html"
           echo "<!DOCTYPE html><html lang='no'><head><meta charset='utf-8'><title>PDF Oversikt</title>" > $INDEX
@@ -93,7 +93,7 @@ jobs:
                 echo "</ul>" >> $INDEX
               elif [[ "$f" == *.pdf ]]; then
                 rel="${f#pdfs/}"
-                echo "<li class='file'>📘 <a href='$rel'>$rel</a></li>" >> $INDEX
+                echo "<li class='file'>📘 <a href='$rel' target='_blank'>$rel</a></li>" >> $INDEX
               fi
             done
             echo "</ul>" >> $INDEX
