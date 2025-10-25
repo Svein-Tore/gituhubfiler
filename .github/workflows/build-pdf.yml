@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Installer nødvendige LaTeX-pakker
+      # 2️⃣ Installer LaTeX
       - name: Install LaTeX
         run: |
           sudo apt-get update
@@ -30,12 +30,15 @@ jobs:
             latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
           done
 
-      # 4️⃣ Kopier alle PDF-er til pdfs/
+      # 4️⃣ Samle alle PDF-er i pdfs/ med unike navn
       - name: Collect all PDFs
         run: |
           mkdir -p pdfs
-          # Kopier alle PDF-er uansett hvor de ligger
-          find . -name "*.pdf" -exec cp {} pdfs/ \;
+          for f in $(find . -name "*.pdf" -not -path "./pdfs/*"); do
+            filename=$(basename "$f")
+            folder=$(dirname "$f" | sed 's|[./]|_|g')
+            cp "$f" "pdfs/${folder}_${filename}"
+          done
           echo "✅ PDFs collected:"
           ls -l pdfs
 
