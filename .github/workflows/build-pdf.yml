@@ -14,6 +14,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended latexmk
+
       - name: Find all .tex files
         id: texfiles
         run: |
@@ -54,11 +59,3 @@ jobs:
             echo "<li><a href='$rel'>$rel</a></li>" >> pdfs/index.html
           done
           echo "</ul></body></html>" >> pdfs/index.html
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./pdfs
-          publish_branch: gh-pages
-          keep_files: false
