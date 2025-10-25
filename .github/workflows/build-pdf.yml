@@ -1,4 +1,4 @@
-name: Build LaTeX PDFs and publish to GitHub Pages (debug safe)
+name: Build LaTeX PDFs and publish to GitHub Pages
 
 on:
   push:
@@ -9,58 +9,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo med token for push
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v3
-        with:
-          persist-credentials: true
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2️⃣ Installer LaTeX og rsync
       - name: Install LaTeX
         run: |
           sudo apt-get update
           sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk rsync
 
-      # 3️⃣ Bygg alle .tex-filer
       - name: Build all .tex files
         run: |
           for f in $(find . -name "*.tex" -not -path "*/.*"); do
-            echo "🧩 Building $f..."
-            latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=$(dirname "$f") "$f" || exit 1
+            latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=$(dirname "$f") "$f"
           done
 
-      # 4️⃣ Samle PDF-er under pdfs/ med mappe-struktur
-      - name: Collect PDFs with debug
+      - name: Collect PDFs
         run: |
           rm -rf pdfs
           mkdir -p pdfs
           rsync -a --include='*/' --include='*.pdf' --exclude='*' ./ pdfs/
 
-          echo "🔍 PDFs collected (recursive):"
-          find pdfs -type f -name "*.pdf"
-          echo "🔍 PDF directories:"
-          find pdfs -type d
-
-      # 5️⃣ Push PDF-er til gh-pages
-      - name: Publish PDFs to GitHub Pages
-        run: |
-          git config --local user.name "github-actions"
-          git config --local user.email "github-actions@github.com"
-
-          # Lag eller bytt til gh-pages branch
-          git checkout --orphan gh-pages
-          git reset --hard
-          git rm -rf .
-
-          # Kopier PDF-er og undermapper til rotnivå med rsync
-          rsync -a pdfs/ ./
-
-          # Legg til .gitkeep hvis katalogen fortsatt er tom
-          if [ -z "$(ls -A .)" ]; then
-            touch .gitkeep
-          fi
-
-          git add .
-          git commit -m "Publish PDFs"
-          git push -f origin gh-pages
+      # ✅ Publish PDFs to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./pdfs
+          # optional: keep_map: true preserves folder structure
