@@ -1,4 +1,4 @@
-name: Build LaTeX PDFs with folder structure (fixed)
+name: Build LaTeX PDFs and push to pdfs-branch
 
 on:
   push:
@@ -14,30 +14,25 @@ jobs:
       # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          persist-credentials: true  # Viktig for å pushe
 
-      # 2️⃣ Installer LaTeX
+      # 2️⃣ Installer LaTeX og rsync
       - name: Install LaTeX
         run: |
           sudo apt-get update
           sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk rsync
 
       # 3️⃣ Bygg alle .tex-filer og legg PDF i samme mappe
-      - name: Build all .tex files with PDFs in same folder
+      - name: Build all .tex files
         run: |
           for f in $(find . -name "*.tex" -not -path "*/.*"); do
             echo "🧩 Building $f..."
-            # -outdir=dirname(f) tvinger PDF til samme mappe som .tex
             latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=$(dirname "$f") "$f" || exit 1
           done
 
-      # 4️⃣ List alle genererte PDF-er for debugging
-      - name: List all PDFs after build
-        run: |
-          echo "🔍 PDFs in repo after build:"
-          find . -name "*.pdf"
-
-      # 5️⃣ Samle PDF-er med mappe-struktur
-      - name: Collect all PDFs preserving folder structure
+      # 4️⃣ Samle PDF-er med mappe-struktur under pdfs/
+      - name: Collect all PDFs
         run: |
           rm -rf pdfs
           mkdir -p pdfs
@@ -45,9 +40,17 @@ jobs:
           echo "✅ PDFs collected:"
           ls -R pdfs
 
-      # 6️⃣ Last opp PDF-er som artifact
-      - name: Upload PDFs as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: latex-pdfs
-          path: pdfs/
+      # 5️⃣ Commit og push PDF-er til pdfs-branch
+      - name: Commit PDFs to pdfs-branch
+        run: |
+          git config --local user.name "github-actions"
+          git config --local user.email "github-actions@github.com"
+
+          # Opprett branch hvis den ikke finnes
+          git fetch origin pdfs-branch || true
+          git checkout -B pdfs-branch
+
+          # Legg til PDF-er
+          git add pdfs/
+          git commit -m "Update PDFs" || echo "No changes to commit"
+          git push origin pdfs-branch --force
