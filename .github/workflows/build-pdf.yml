@@ -3,8 +3,6 @@ name: Build all LaTeX PDFs
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - 'pdfs/**'
   pull_request:
     branches: [ main ]
 
@@ -17,13 +15,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Installer nødvendige LaTeX-pakker
+      # 2️⃣ Installer LaTeX
       - name: Install LaTeX
         run: |
           sudo apt-get update
           sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk
 
-      # 3️⃣ Bygg alle .tex-filer (inkl. undermapper)
+      # 3️⃣ Bygg alle .tex-filer
       - name: Build all .tex files
         run: |
           mkdir -p pdfs
@@ -39,11 +37,9 @@ jobs:
           echo "✅ PDFs generated:"
           ls -l pdfs
 
-      # 5️⃣ Commit og push PDF-er med GITHUB_TOKEN
-      - name: Commit and push PDFs
-        run: |
-          git config --local user.name "github-actions"
-          git config --local user.email "github-actions@github.com"
-          git add pdfs/
-          git commit -m "Update PDFs" || echo "No changes to commit"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
+      # 5️⃣ Last opp PDF-er som artifacts
+      - name: Upload PDFs as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: latex-pdfs
+          path: pdfs/
