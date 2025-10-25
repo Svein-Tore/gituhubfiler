@@ -44,16 +44,30 @@ jobs:
             done
           ' bash {} +
 
-      - name: Generate index.html for GitHub Pages
+      - name: Generate recursive index.html for GitHub Pages
         run: |
           echo "<html><head><meta charset='utf-8'><title>PDF Index</title></head><body>" > pdfs/index.html
           echo "<h1>📄 PDF filer</h1>" >> pdfs/index.html
-          echo "<ul>" >> pdfs/index.html
-          find pdfs -type f -name "*.pdf" | sort | while read f; do
-            rel="${f#pdfs/}"
-            echo "<li><a href='$rel'>$rel</a></li>" >> pdfs/index.html
-          done
-          echo "</ul></body></html>" >> pdfs/index.html
+
+          # Funksjon for å liste mapper og PDF-er rekursivt
+          list_dir() {
+            local dir="$1"
+            echo "<ul>" >> pdfs/index.html
+            for f in "$dir"/*; do
+              if [ -d "$f" ]; then
+                echo "<li>📁 $(basename "$f")</li>" >> pdfs/index.html
+                list_dir "$f"
+              elif [[ "$f" == *.pdf ]]; then
+                rel="${f#pdfs/}"
+                echo "<li><a href='$rel'>$rel</a></li>" >> pdfs/index.html
+              fi
+            done
+            echo "</ul>" >> pdfs/index.html
+          }
+
+          list_dir pdfs
+
+          echo "</body></html>" >> pdfs/index.html
           cat pdfs/index.html
 
       - name: Deploy to GitHub Pages
