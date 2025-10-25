@@ -1,7 +1,9 @@
-name: Build LaTeX PDFs and publish to GitHub Pages
+name: Build LaTeX PDFs and Deploy to GitHub Pages
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
 
 jobs:
@@ -9,39 +11,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 2️⃣ Installer LaTeX og rsync
-      - name: Install LaTeX
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk rsync
+      - name: Build LaTeX PDFs
+        uses: xu-cheng/latex-action@v2
+        with:
+          root_file: |
+            main.tex
+            **/*.tex
+          compiler: latexmk
 
-      # 3️⃣ Bygg alle .tex-filer
-      - name: Build all .tex files
+      - name: Create pdfs directory
+        run: mkdir -p pdfs
+
+      - name: Move all PDFs (preserve folder structure)
         run: |
-          for f in $(find . -name "*.tex" -not -path "*/.*"); do
-            echo "🧩 Building $f..."
-            latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=$(dirname "$f") "$f" || exit 1
+          find . -name "*.pdf" -not -path "./pdfs/*" -exec bash -c '
+            for file; do
+              target="pdfs/${file#./}"
+              mkdir -p "$(dirname "$target")"
+              mv "$file" "$target"
+            done
+          ' bash {} +
+
+      - name: Generate index.html for GitHub Pages
+        run: |
+          echo "<html><head><meta charset='utf-8'><title>PDF Index</title></head><body>" > pdfs/index.html
+          echo "<h1>📄 PDF filer</h1>" >> pdfs/index.html
+          echo "<ul>" >> pdfs/index.html
+          find pdfs -type f -name "*.pdf" | sort | while read f; do
+            rel="${f#pdfs/}"
+            echo "<li><a href='$rel'>$rel</a></li>" >> pdfs/index.html
           done
+          echo "</ul></body></html>" >> pdfs/index.html
+          cat pdfs/index.html
 
-      # 4️⃣ Samle PDF-er under pdfs/ med mappe-struktur
-      - name: Collect PDFs with debug
-        run: |
-          rm -rf pdfs
-          mkdir -p pdfs
-          rsync -a --include='*/' --include='*.pdf' --exclude='*' ./ pdfs/
-
-          echo "🔍 PDFs collected (recursive):"
-          find pdfs -type f -name "*.pdf"
-          echo "🔍 PDF directories:"
-          find pdfs -type d
-
-      # 5️⃣ Deploy til GitHub Pages
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4.0.0
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./pdfs
+          publish_branch: gh-pages
+          keep_files: false
