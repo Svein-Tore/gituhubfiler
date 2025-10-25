@@ -13,16 +13,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Installer nødvendige LaTeX-pakker
+      # 2️⃣ Installer nødvendige LaTeX-pakker
       - name: Install LaTeX
         run: |
           sudo apt-get update
           sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk
 
-      # Bygg alle .tex-filer
+      # 3️⃣ Bygg alle .tex-filer (inkl. undermapper)
       - name: Build all .tex files
         run: |
           mkdir -p pdfs
@@ -31,18 +32,18 @@ jobs:
             latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
           done
 
-      # Flytt PDF-er til pdfs/
+      # 4️⃣ Flytt PDF-er til pdfs/
       - name: Move all PDFs to pdfs folder
         run: |
           find . -name "*.pdf" -not -path "./pdfs/*" -exec mv {} pdfs/ \;
           echo "✅ PDFs generated:"
           ls -l pdfs
 
-      # Commit og push PDF-er
+      # 5️⃣ Commit og push PDF-er med GITHUB_TOKEN
       - name: Commit and push PDFs
         run: |
           git config --local user.name "github-actions"
           git config --local user.email "github-actions@github.com"
           git add pdfs/
           git commit -m "Update PDFs" || echo "No changes to commit"
-          git push
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
