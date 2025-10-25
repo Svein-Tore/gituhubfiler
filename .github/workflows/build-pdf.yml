@@ -1,4 +1,4 @@
-name: Build LaTeX PDFs with folders
+name: Build LaTeX PDFs with folder structure
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Installer nødvendige LaTeX-pakker
+      # 2️⃣ Installer LaTeX
       - name: Install LaTeX
         run: |
           sudo apt-get update
@@ -29,13 +29,14 @@ jobs:
             latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
           done
 
-      # 4️⃣ Samle alle PDF-er i pdfs/ med samme mappe-struktur
+      # 4️⃣ Samle alle PDF-er i pdfs/ med riktig mappe-struktur
       - name: Collect all PDFs preserving folder structure
         run: |
           rm -rf pdfs
           mkdir -p pdfs
           for f in $(find . -name "*.pdf" -not -path "./pdfs/*"); do
-            rel_folder=$(dirname "$f")
+            # Finn relativ mappe uten './' i starten
+            rel_folder=$(dirname "$(realpath --relative-to=. "$f")")
             mkdir -p "pdfs/$rel_folder"
             cp "$f" "pdfs/$rel_folder/"
           done
