@@ -1,50 +1,52 @@
-name: Build and Push PDFs to pdfs-branch
+name: Build all LaTeX PDFs
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    paths-ignore:
+      - 'pdfs/**'
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: true
 
-    - name: Install TeX Live
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y texlive-full
+      # ⚡ Bruker ferdigbygget LaTeX-miljø (raskt!)
+      - name: Set up LaTeX environment
+        uses: xu-cheng/latex-action@v2
+        with:
+          root_file: dummy.tex # Vi overstyrer dette manuelt senere
+        env:
+          FORCE_RUN: true
 
-    - name: Build all LaTeX PDFs
-      run: |
-        mkdir -p pdfs
-        for f in *.tex; do
-          echo "Bygger $f ..."
-          latexmk -pdf -interaction=nonstopmode "$f" || echo "⚠️ Bygg feilet for $f"
-          name=$(basename "$f" .tex)
-          if [ -f "$name.pdf" ]; then
-            mv "$name.pdf" "pdfs/$name.pdf"
-            echo "✅ Ferdig: $name.pdf"
-          else
-            echo "⚠️ Ingen PDF generert for $f"
-          fi
-        done
+      # 🧱 Bygger alle .tex-filer (også i undermapper)
+      - name: Build all .tex files
+        run: |
+          mkdir -p pdfs
+          for f in $(find . -name "*.tex" -not -path "*/.*"); do
+            echo "🧩 Building $f..."
+            latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
+          done
 
-    - name: Push PDFs to pdfs-branch
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        git checkout -B pdfs-branch
-        git add pdfs/*.pdf
-        git commit -m "Oppdater PDF-er automatisk fra main" || echo "Ingen endringer å committe"
-        git push -u origin pdfs-branch --force
+      # 📦 Samler alle PDF-er i pdfs/
+      - name: Move all PDFs to pdfs folder
+        run: |
+          find . -name "*.pdf" -not -path "./pdfs/*" -exec mv {} pdfs/ \;
+          echo "✅ Finished moving PDFs:"
+          ls -l pdfs
+
+      # 🔁 Commit og push PDF-ene tilbake til repoet
+      - name: Commit and push PDFs
+        run: |
+          git config --local user.name "github-actions"
+          git config --local user.email "github-actions@github.com"
+          git add pdfs/
+          git commit -m "Update PDFs" || echo "No changes to commit"
+          git push
