@@ -9,30 +9,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      # 1️⃣ Checkout repo med token for push
+      - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          persist-credentials: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
+      # 2️⃣ Installer LaTeX og rsync
       - name: Install LaTeX
         run: |
           sudo apt-get update
           sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk rsync
 
+      # 3️⃣ Bygg alle .tex-filer
       - name: Build all .tex files
         run: |
           for f in $(find . -name "*.tex" -not -path "*/.*"); do
-            latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=$(dirname "$f") "$f"
+            echo "🧩 Building $f..."
+            latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=$(dirname "$f") "$f" || exit 1
           done
 
-      - name: Collect PDFs
+      # 4️⃣ Samle PDF-er under pdfs/ med mappe-struktur
+      - name: Collect PDFs with debug
         run: |
           rm -rf pdfs
           mkdir -p pdfs
           rsync -a --include='*/' --include='*.pdf' --exclude='*' ./ pdfs/
 
-      # ✅ Publish PDFs to GitHub Pages
+          echo "🔍 PDFs collected (recursive):"
+          find pdfs -type f -name "*.pdf"
+          echo "🔍 PDF directories:"
+          find pdfs -type d
+
+      # 5️⃣ Deploy til GitHub Pages
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v6
+        uses: peaceiris/actions-gh-pages@v6.4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./pdfs
-          # optional: keep_map: true preserves folder structure
+          keep_map: true   # Bevarer mappe-struktur
