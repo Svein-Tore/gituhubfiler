@@ -19,7 +19,7 @@ jobs:
       - name: Install LaTeX
         run: |
           sudo apt-get update
-          sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk
+          sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk rsync
 
       # 3️⃣ Bygg alle .tex-filer (inkl. undermapper)
       - name: Build all .tex files
@@ -29,18 +29,12 @@ jobs:
             latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
           done
 
-      # 4️⃣ Samle alle PDF-er i pdfs/ med korrekt mappe-struktur
+      # 4️⃣ Samle alle PDF-er med mappe-struktur ved hjelp av rsync
       - name: Collect all PDFs preserving folder structure
         run: |
           rm -rf pdfs
           mkdir -p pdfs
-          for f in $(find . -name "*.pdf" -not -path "./pdfs/*"); do
-            # Fjern leading ./ fra filen
-            rel_path="${f#./}"
-            rel_folder=$(dirname "$rel_path")
-            mkdir -p "pdfs/$rel_folder"
-            cp "$f" "pdfs/$rel_folder/"
-          done
+          rsync -a --include='*/' --include='*.pdf' --exclude='*' ./ pdfs/
           echo "✅ PDFs collected:"
           ls -R pdfs
 
