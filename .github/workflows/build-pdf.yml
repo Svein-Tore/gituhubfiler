@@ -22,6 +22,7 @@ jobs:
       - name: Find all .tex files
         run: |
           find . -name "*.tex" -not -path "./pdfs/*" > texfiles.txt
+          echo "🧩 Found the following .tex files:"
           cat texfiles.txt
 
       - name: Build each LaTeX file
@@ -42,67 +43,52 @@ jobs:
             done
           ' bash {} +
 
-      - name: Debug PDF structure
+      - name: Check PDF structure before deploy
         run: |
-          echo "🔍 PDFs after moving:"
+          echo "📂 PDFs ready for deployment:"
           find pdfs -type f
 
-      - name: Generate colorful, icon-based index.html
+      - name: Generate index.html with folder structure
         run: |
           INDEX="pdfs/index.html"
-          echo "<!DOCTYPE html>" > $INDEX
-          echo "<html lang='no'><head><meta charset='utf-8'><title>PDF Oversikt</title>" >> $INDEX
+          echo "<!DOCTYPE html><html lang='no'><head><meta charset='utf-8'><title>PDF Oversikt</title>" > $INDEX
           echo "<style>
-          body { font-family: 'Segoe UI', sans-serif; margin: 2em; background: #f4f6f8; }
-          h1 { color: #2c3e50; }
-          ul { list-style-type: none; padding-left: 1em; }
-          li { margin: 4px 0; }
-          .folder { font-weight: bold; margin-top: 8px; }
-          .file a { text-decoration: none; color: #2c3e50; }
-          .file a:hover { text-decoration: underline; color: #e74c3c; }
-          .icon { margin-right: 6px; }
-          .fag1 { color: #16a085; }
-          .fag2 { color: #2980b9; }
-          .fag3 { color: #8e44ad; }
-          .fag4 { color: #d35400; }
-          .pdf-icon { color: #e74c3c; font-weight: bold; }
-          </style></head><body>" >> $INDEX
-          echo "<h1>📚 PDF Oversikt</h1>" >> $INDEX
+          body { font-family:'Segoe UI',sans-serif;margin:2em;background:#f4f6f8; }
+          h1 { color:#2c3e50; }
+          ul { list-style-type:none;padding-left:1em; }
+          li { margin:4px 0; }
+          .folder{font-weight:bold;margin-top:8px;color:#2980b9;}
+          .file a{text-decoration:none;color:#2c3e50;}
+          .file a:hover{text-decoration:underline;color:#e74c3c;}
+          </style></head><body><h1>📚 PDF Oversikt</h1>" >> $INDEX
 
           list_dir() {
             local dir="$1"
-            local depth="$2"
-            local indent=$((depth + 1))
-
             echo "<ul>" >> $INDEX
             for f in "$dir"/*; do
               if [ -d "$f" ]; then
-                folder_name=$(basename "$f")
-                # Farg mappene etter navn
-                case "$folder_name" in
-                  fag1) color_class="fag1";;
-                  fag2) color_class="fag2";;
-                  fag3) color_class="fag3";;
-                  fag4) color_class="fag4";;
-                  *) color_class="";;
-                esac
-                echo "<li class='folder $color_class'><span class='icon'>📁</span>$folder_name</li>" >> $INDEX
-                list_dir "$f" $((depth + 1))
+                name=$(basename "$f")
+                echo "<li class='folder'>📁 $name</li>" >> $INDEX
+                list_dir "$f"
               elif [[ "$f" == *.pdf ]]; then
                 rel="${f#pdfs/}"
-                echo "<li class='file'><span class='icon pdf-icon'>📘</span><a href='$rel'>$rel</a></li>" >> $INDEX
+                echo "<li class='file'><a href='$rel'>📘 $rel</a></li>" >> $INDEX
               fi
             done
             echo "</ul>" >> $INDEX
           }
 
-          list_dir pdfs 0
+          list_dir pdfs
           echo "</body></html>" >> $INDEX
+          echo "✅ index.html created at pdfs/index.html"
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./pdfs
-          publish_branch: gh-pages
-          keep_files: false
+      - name: Deploy to gh-pages (preserve folder structure)
+        run: |
+          cd pdfs
+          git init
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Deploy PDFs"
+          git branch -M gh-pages
+          git push -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages
