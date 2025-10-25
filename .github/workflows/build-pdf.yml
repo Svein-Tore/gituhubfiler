@@ -31,11 +31,9 @@ jobs:
             latexmk -pdf -interaction=nonstopmode "$file"
           done < texfiles.txt
 
-      - name: Create pdfs directory
-        run: mkdir -p pdfs
-
       - name: Move all PDFs (preserve folder structure)
         run: |
+          rm -rf pdfs
           find . -name "*.pdf" -not -path "./pdfs/*" -exec bash -c '
             for file; do
               target="pdfs/${file#./}"
@@ -49,45 +47,62 @@ jobs:
           echo "🔍 PDFs after moving:"
           find pdfs -type f
 
-      - name: Generate recursive styled index.html in root
+      - name: Generate colorful, icon-based index.html
         run: |
-          echo "<!DOCTYPE html>" > index.html
-          echo "<html><head><meta charset='utf-8'><title>PDF Index</title>" >> index.html
-          echo "<style>" >> index.html
-          echo "body { font-family: Arial, sans-serif; margin: 2em; background: #f9f9f9; }" >> index.html
-          echo "h1 { color: #2c3e50; }" >> index.html
-          echo "ul { list-style-type: none; padding-left: 1em; }" >> index.html
-          echo "li { margin: 0.2em 0; }" >> index.html
-          echo ".folder { font-weight: bold; color: #2980b9; }" >> index.html
-          echo ".file a { text-decoration: none; color: #2c3e50; }" >> index.html
-          echo ".file a:hover { text-decoration: underline; color: #e74c3c; }" >> index.html
-          echo "</style></head><body>" >> index.html
-          echo "<h1>📄 PDF filer</h1>" >> index.html
+          INDEX="pdfs/index.html"
+          echo "<!DOCTYPE html>" > $INDEX
+          echo "<html lang='no'><head><meta charset='utf-8'><title>PDF Oversikt</title>" >> $INDEX
+          echo "<style>
+          body { font-family: 'Segoe UI', sans-serif; margin: 2em; background: #f4f6f8; }
+          h1 { color: #2c3e50; }
+          ul { list-style-type: none; padding-left: 1em; }
+          li { margin: 4px 0; }
+          .folder { font-weight: bold; margin-top: 8px; }
+          .file a { text-decoration: none; color: #2c3e50; }
+          .file a:hover { text-decoration: underline; color: #e74c3c; }
+          .icon { margin-right: 6px; }
+          .fag1 { color: #16a085; }
+          .fag2 { color: #2980b9; }
+          .fag3 { color: #8e44ad; }
+          .fag4 { color: #d35400; }
+          .pdf-icon { color: #e74c3c; font-weight: bold; }
+          </style></head><body>" >> $INDEX
+          echo "<h1>📚 PDF Oversikt</h1>" >> $INDEX
 
           list_dir() {
             local dir="$1"
-            echo "<ul>" >> index.html
+            local depth="$2"
+            local indent=$((depth + 1))
+
+            echo "<ul>" >> $INDEX
             for f in "$dir"/*; do
               if [ -d "$f" ]; then
-                echo "<li class='folder'>📁 $(basename "$f")</li>" >> index.html
-                list_dir "$f"
+                folder_name=$(basename "$f")
+                # Farg mappene etter navn
+                case "$folder_name" in
+                  fag1) color_class="fag1";;
+                  fag2) color_class="fag2";;
+                  fag3) color_class="fag3";;
+                  fag4) color_class="fag4";;
+                  *) color_class="";;
+                esac
+                echo "<li class='folder $color_class'><span class='icon'>📁</span>$folder_name</li>" >> $INDEX
+                list_dir "$f" $((depth + 1))
               elif [[ "$f" == *.pdf ]]; then
-                rel="${f#}"
-                echo "<li class='file'><a href='$rel'>$rel</a></li>" >> index.html
+                rel="${f#pdfs/}"
+                echo "<li class='file'><span class='icon pdf-icon'>📘</span><a href='$rel'>$rel</a></li>" >> $INDEX
               fi
             done
-            echo "</ul>" >> index.html
+            echo "</ul>" >> $INDEX
           }
 
-          list_dir pdfs
-
-          echo "</body></html>" >> index.html
-          cat index.html
+          list_dir pdfs 0
+          echo "</body></html>" >> $INDEX
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: ./pdfs
           publish_branch: gh-pages
           keep_files: false
