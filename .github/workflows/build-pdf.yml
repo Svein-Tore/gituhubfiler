@@ -44,22 +44,32 @@ jobs:
             done
           ' bash {} +
 
-      - name: Generate recursive index.html for GitHub Pages
+      - name: Generate styled recursive index.html for GitHub Pages
         run: |
-          echo "<html><head><meta charset='utf-8'><title>PDF Index</title></head><body>" > pdfs/index.html
+          echo "<!DOCTYPE html>" > pdfs/index.html
+          echo "<html><head><meta charset='utf-8'><title>PDF Index</title>" >> pdfs/index.html
+          echo "<style>" >> pdfs/index.html
+          echo "body { font-family: Arial, sans-serif; margin: 2em; background: #f9f9f9; }" >> pdfs/index.html
+          echo "h1 { color: #2c3e50; }" >> pdfs/index.html
+          echo "ul { list-style-type: none; padding-left: 1em; }" >> pdfs/index.html
+          echo "li { margin: 0.2em 0; }" >> pdfs/index.html
+          echo ".folder { font-weight: bold; color: #2980b9; }" >> pdfs/index.html
+          echo ".file a { text-decoration: none; color: #2c3e50; }" >> pdfs/index.html
+          echo ".file a:hover { text-decoration: underline; color: #e74c3c; }" >> pdfs/index.html
+          echo "</style></head><body>" >> pdfs/index.html
           echo "<h1>📄 PDF filer</h1>" >> pdfs/index.html
 
-          # Funksjon for å liste mapper og PDF-er rekursivt
+          echo "Generating index..."
           list_dir() {
             local dir="$1"
             echo "<ul>" >> pdfs/index.html
             for f in "$dir"/*; do
               if [ -d "$f" ]; then
-                echo "<li>📁 $(basename "$f")</li>" >> pdfs/index.html
+                echo "<li class='folder'>📁 $(basename "$f")</li>" >> pdfs/index.html
                 list_dir "$f"
               elif [[ "$f" == *.pdf ]]; then
                 rel="${f#pdfs/}"
-                echo "<li><a href='$rel'>$rel</a></li>" >> pdfs/index.html
+                echo "<li class='file'><a href='$rel'>$rel</a></li>" >> pdfs/index.html
               fi
             done
             echo "</ul>" >> pdfs/index.html
