@@ -1,10 +1,13 @@
-name: Build LaTeX PDFs and Deploy to GitHub Pages
+name: Build and Deploy LaTeX PDFs
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -13,82 +16,39 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Install LaTeX
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended latexmk
+        run: sudo apt-get update && sudo apt-get install -y texlive-full
 
-      - name: Find all .tex files
+      - name: Find and build all .tex files
         run: |
-          find . -name "*.tex" -not -path "./pdfs/*" > texfiles.txt
-          echo "🧩 Found the following .tex files:"
+          echo "🔍 Searching for .tex files..."
+          find . -type f -name "*.tex" > texfiles.txt
           cat texfiles.txt
-
-      - name: Build each LaTeX file
-        run: |
+          mkdir -p pdfs
           while read file; do
             echo "🧩 Building $file ..."
-            latexmk -pdf -interaction=nonstopmode "$file"
+            outdir="pdfs/$(dirname "$file" | sed 's|^\./||')"
+            mkdir -p "$outdir"
+            latexmk -pdf -interaction=nonstopmode -output-directory="$outdir" "$file"
           done < texfiles.txt
 
-      - name: Move all PDFs (preserve folder structure)
+      - name: Clean auxiliary files
+        run: find pdfs -type f \( -name "*.aux" -o -name "*.log" -o -name "*.out" -o -name "*.fls" -o -name "*.fdb_latexmk" \) -delete
+
+      - name: List generated PDFs
         run: |
-          rm -rf pdfs
-          find . -name "*.pdf" -not -path "./pdfs/*" -exec bash -c '
-            for file; do
-              target="pdfs/${file#./}"
-              mkdir -p "$(dirname "$target")"
-              mv "$file" "$target"
-            done
-          ' bash {} +
+          echo "✅ PDFs generated:"
+          find pdfs -type f -name "*.pdf"
 
-      - name: Check PDF structure before deploy
-        run: |
-          echo "📂 PDFs ready for deployment:"
-          find pdfs -type f
-
-      - name: Generate index.html with folder structure
-        run: |
-          INDEX="pdfs/index.html"
-          echo "<!DOCTYPE html><html lang='no'><head><meta charset='utf-8'><title>PDF Oversikt</title>" > $INDEX
-          echo "<style>
-          body { font-family:'Segoe UI',sans-serif;margin:2em;background:#f4f6f8; }
-          h1 { color:#2c3e50; }
-          ul { list-style-type:none;padding-left:1em; }
-          li { margin:4px 0; }
-          .folder{font-weight:bold;margin-top:8px;color:#2980b9;}
-          .file a{text-decoration:none;color:#2c3e50;}
-          .file a:hover{text-decoration:underline;color:#e74c3c;}
-          </style></head><body><h1>📚 PDF Oversikt</h1>" >> $INDEX
-
-          list_dir() {
-            local dir="$1"
-            echo "<ul>" >> $INDEX
-            for f in "$dir"/*; do
-              if [ -d "$f" ]; then
-                name=$(basename "$f")
-                echo "<li class='folder'>📁 $name</li>" >> $INDEX
-                list_dir "$f"
-              elif [[ "$f" == *.pdf ]]; then
-                rel="${f#pdfs/}"
-                echo "<li class='file'><a href='$rel'>📘 $rel</a></li>" >> $INDEX
-              fi
-            done
-            echo "</ul>" >> $INDEX
-          }
-
-          list_dir pdfs
-          echo "</body></html>" >> $INDEX
-          echo "✅ index.html created at pdfs/index.html"
-
-      - name: Deploy to gh-pages (preserve folder structure)
-        run: |
-          cd pdfs
-          git init
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add .
-          git commit -m "Deploy PDFs"
-          git branch -M gh-pages
-          git push -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages
+      - name: Deploy PDFs to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: pdfs
+          keep_files: true
+          user_name: github-actions
+          user_email: github-actions@github.com
