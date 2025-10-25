@@ -1,9 +1,7 @@
-name: Build LaTeX PDFs and push to pdfs-branch
+name: Build LaTeX PDFs and publish to GitHub Pages (debug)
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 jobs:
@@ -11,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repository med write-tilgang
+      # 1️⃣ Checkout repo med token for å kunne pushe
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -24,7 +22,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk rsync
 
-      # 3️⃣ Bygg alle .tex-filer med PDF i samme mappe
+      # 3️⃣ Bygg alle .tex-filer
       - name: Build all .tex files
         run: |
           for f in $(find . -name "*.tex" -not -path "*/.*"); do
@@ -32,26 +30,30 @@ jobs:
             latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=$(dirname "$f") "$f" || exit 1
           done
 
-      # 4️⃣ Samle PDF-er med mappe-struktur under pdfs/
-      - name: Collect all PDFs
+      # 4️⃣ Samle PDF-er under pdfs/ med mappe-struktur
+      - name: Collect PDFs with debug
         run: |
           rm -rf pdfs
           mkdir -p pdfs
           rsync -a --include='*/' --include='*.pdf' --exclude='*' ./ pdfs/
-          echo "✅ PDFs collected:"
-          ls -R pdfs
 
-      # 5️⃣ Commit og push PDF-er til pdfs-branch
-      - name: Commit PDFs to pdfs-branch
+          echo "🔍 PDFs collected (recursive):"
+          find pdfs -type f -name "*.pdf"
+          echo "🔍 PDF directories:"
+          find pdfs -type d
+
+      # 5️⃣ Push PDF-er til gh-pages for GitHub Pages
+      - name: Publish PDFs to GitHub Pages
         run: |
           git config --local user.name "github-actions"
           git config --local user.email "github-actions@github.com"
 
-          # Opprett branch hvis den ikke finnes
-          git fetch origin pdfs-branch || true
-          git checkout -B pdfs-branch
+          git checkout --orphan gh-pages
+          git reset --hard
+          git rm -rf .
 
-          # Legg til PDF-er
-          git add pdfs/
-          git commit -m "Update PDFs" || echo "No changes to commit"
-          git push origin pdfs-branch --force
+          cp -r pdfs/* .
+
+          git add .
+          git commit -m "Publish PDFs"
+          git push -f origin gh-pages
