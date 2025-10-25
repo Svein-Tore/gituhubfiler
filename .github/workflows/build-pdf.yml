@@ -29,14 +29,15 @@ jobs:
             latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
           done
 
-      # 4️⃣ Samle alle PDF-er i pdfs/ med riktig mappe-struktur
+      # 4️⃣ Samle alle PDF-er i pdfs/ med korrekt mappe-struktur
       - name: Collect all PDFs preserving folder structure
         run: |
           rm -rf pdfs
           mkdir -p pdfs
           for f in $(find . -name "*.pdf" -not -path "./pdfs/*"); do
-            # Finn relativ mappe uten './' i starten
-            rel_folder=$(dirname "$(realpath --relative-to=. "$f")")
+            # Fjern leading ./ fra filen
+            rel_path="${f#./}"
+            rel_folder=$(dirname "$rel_path")
             mkdir -p "pdfs/$rel_folder"
             cp "$f" "pdfs/$rel_folder/"
           done
