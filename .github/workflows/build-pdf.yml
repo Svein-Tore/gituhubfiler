@@ -1,4 +1,4 @@
-name: Build all LaTeX PDFs
+name: Build LaTeX PDFs with folders
 
 on:
   push:
@@ -15,32 +15,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Installer LaTeX
+      # 2️⃣ Installer nødvendige LaTeX-pakker
       - name: Install LaTeX
         run: |
           sudo apt-get update
           sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk
 
-      # 3️⃣ Bygg alle .tex-filer
+      # 3️⃣ Bygg alle .tex-filer (inkl. undermapper)
       - name: Build all .tex files
         run: |
-          mkdir -p pdfs
           for f in $(find . -name "*.tex" -not -path "*/.*"); do
             echo "🧩 Building $f..."
             latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
           done
 
-      # 4️⃣ Samle alle PDF-er i pdfs/ med unike navn
-      - name: Collect all PDFs
+      # 4️⃣ Samle alle PDF-er i pdfs/ med samme mappe-struktur
+      - name: Collect all PDFs preserving folder structure
         run: |
+          rm -rf pdfs
           mkdir -p pdfs
           for f in $(find . -name "*.pdf" -not -path "./pdfs/*"); do
-            filename=$(basename "$f")
-            folder=$(dirname "$f" | sed 's|[./]|_|g')
-            cp "$f" "pdfs/${folder}_${filename}"
+            rel_folder=$(dirname "$f")
+            mkdir -p "pdfs/$rel_folder"
+            cp "$f" "pdfs/$rel_folder/"
           done
           echo "✅ PDFs collected:"
-          ls -l pdfs
+          ls -R pdfs
 
       # 5️⃣ Last opp PDF-er som artifact
       - name: Upload PDFs as artifact
