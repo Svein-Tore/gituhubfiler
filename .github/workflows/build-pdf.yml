@@ -1,4 +1,4 @@
-name: Build LaTeX PDFs with folder structure
+name: Build LaTeX PDFs with folder structure (fixed)
 
 on:
   push:
@@ -21,15 +21,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended latexmk rsync
 
-      # 3️⃣ Bygg alle .tex-filer (inkl. undermapper)
-      - name: Build all .tex files
+      # 3️⃣ Bygg alle .tex-filer og legg PDF i samme mappe
+      - name: Build all .tex files with PDFs in same folder
         run: |
           for f in $(find . -name "*.tex" -not -path "*/.*"); do
             echo "🧩 Building $f..."
-            latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
+            # -outdir=dirname(f) tvinger PDF til samme mappe som .tex
+            latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=$(dirname "$f") "$f" || exit 1
           done
 
-      # 4️⃣ Samle alle PDF-er med mappe-struktur ved hjelp av rsync
+      # 4️⃣ List alle genererte PDF-er for debugging
+      - name: List all PDFs after build
+        run: |
+          echo "🔍 PDFs in repo after build:"
+          find . -name "*.pdf"
+
+      # 5️⃣ Samle PDF-er med mappe-struktur
       - name: Collect all PDFs preserving folder structure
         run: |
           rm -rf pdfs
@@ -38,7 +45,7 @@ jobs:
           echo "✅ PDFs collected:"
           ls -R pdfs
 
-      # 5️⃣ Last opp PDF-er som artifact
+      # 6️⃣ Last opp PDF-er som artifact
       - name: Upload PDFs as artifact
         uses: actions/upload-artifact@v4
         with:
