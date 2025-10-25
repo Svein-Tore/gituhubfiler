@@ -44,6 +44,11 @@ jobs:
             done
           ' bash {} +
 
+      - name: Debug PDF structure
+        run: |
+          echo "🔍 PDFs after moving:"
+          find pdfs -type f
+
       - name: Generate styled recursive index.html for GitHub Pages
         run: |
           echo "<!DOCTYPE html>" > pdfs/index.html
@@ -59,7 +64,6 @@ jobs:
           echo "</style></head><body>" >> pdfs/index.html
           echo "<h1>📄 PDF filer</h1>" >> pdfs/index.html
 
-          echo "Generating index..."
           list_dir() {
             local dir="$1"
             echo "<ul>" >> pdfs/index.html
@@ -68,15 +72,15 @@ jobs:
                 echo "<li class='folder'>📁 $(basename "$f")</li>" >> pdfs/index.html
                 list_dir "$f"
               elif [[ "$f" == *.pdf ]]; then
+                # Sørg for riktig relative path fra index.html
                 rel="${f#pdfs/}"
-                echo "<li class='file'><a href='$rel'>$rel</a></li>" >> pdfs/index.html
+                echo "<li class='file'><a href='./$rel'>$rel</a></li>" >> pdfs/index.html
               fi
             done
             echo "</ul>" >> pdfs/index.html
           }
 
           list_dir pdfs
-
           echo "</body></html>" >> pdfs/index.html
           cat pdfs/index.html
 
