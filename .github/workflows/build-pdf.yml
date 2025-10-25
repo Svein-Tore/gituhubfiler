@@ -1,8 +1,10 @@
-name: Build LaTeX PDF
+name: Build all LaTeX PDFs
 
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'pdfs/**'
   pull_request:
     branches: [ main ]
 
@@ -11,27 +13,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        persist-credentials: true
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: true
 
-    - name: Build LaTeX PDF
-      uses: xu-cheng/latex-action@v2
-      with:
-        root_file: main.tex
-        compiler: latexmk
+      - name: Install LaTeX
+        run: sudo apt-get update && sudo apt-get install -y texlive-full
 
-    - name: Ensure pdfs folder exists
-      run: mkdir -p pdfs
+      - name: Build all .tex files
+        run: |
+          mkdir -p pdfs
+          for f in $(find . -name "*.tex" -not -path "*/.*"); do
+            echo "Building $f..."
+            latexmk -pdf -interaction=nonstopmode -halt-on-error "$f" || exit 1
+          done
 
-    - name: Move PDF to pdfs folder
-      run: mv main.pdf pdfs/main.pdf
+      - name: Move PDFs to pdfs folder
+        run: |
+          find . -name "*.pdf" -not -path "./pdfs/*" -exec mv {} pdfs/ \;
+          ls -l pdfs
 
-    - name: Commit and push PDF
-      run: |
-        git config --local user.name "github-actions"
-        git config --local user.email "github-actions@github.com"
-        git add pdfs/main.pdf
-        git commit -m "Update PDF" || echo "No changes to commit"
-        git push
+      - name: Commit and push PDFs
+        run: |
+          git config --local user.name "github-actions"
+          git config --local user.email "github-actions@github.com"
+          git add pdfs/
+          git commit -m "Update PDFs" || echo "No changes to commit"
+          git push
