@@ -72,7 +72,7 @@ jobs:
           }
           </script>
           </head><body>" >> $INDEX
-          echo "<h1>📚 PDF Oversikt</h1>" >> $INDEX
+          echo "<h1>📚 Tavlenotater og prøver</h1>" >> $INDEX
 
           list_dir() {
             local dir="$1"
